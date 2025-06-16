@@ -1,10 +1,17 @@
 package com.example.project22.controller;
 
+import com.example.project22.model.Artist;
+import com.example.project22.model.Genre;
+import com.example.project22.model.Publisher;
 import com.example.project22.model.Record;
+import com.example.project22.service.ArtistService;
+import com.example.project22.service.GenreService;
+import com.example.project22.service.PublisherService;
 import com.example.project22.service.RecordService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -16,10 +23,19 @@ import java.util.Optional;
 public class RecordWebController {
 
     private final RecordService recordService;
+    private final ArtistService artistService;
+    private final PublisherService publisherService;
+    private final GenreService genreService;
 
     @Autowired
-    public RecordWebController(RecordService recordService) {
+    public RecordWebController(RecordService recordService,
+                              ArtistService artistService,
+                              PublisherService publisherService,
+                              GenreService genreService) {
         this.recordService = recordService;
+        this.artistService = artistService;
+        this.publisherService = publisherService;
+        this.genreService = genreService;
     }
 
     @GetMapping
@@ -62,5 +78,69 @@ public class RecordWebController {
         } else {
             return "redirect:/records";
         }
+    }
+
+    @GetMapping("/new")
+    public String showNewRecordForm(Model model) {
+        model.addAttribute("record", new Record());
+        model.addAttribute("artists", artistService.findAll());
+        model.addAttribute("publishers", publisherService.findAll());
+        model.addAttribute("genres", genreService.findAll());
+        return "records/new";
+    }
+
+    @PostMapping
+    public String createRecord(@ModelAttribute Record record,
+                             BindingResult result,
+                             RedirectAttributes redirectAttributes) {
+        if (result.hasErrors()) {
+            return "records/new";
+        }
+
+        Record savedRecord = recordService.save(record);
+        redirectAttributes.addFlashAttribute("message", "Платівку успішно додано!");
+        return "redirect:/records";
+    }
+
+    @GetMapping("/{id}/edit")
+    public String showEditRecordForm(@PathVariable Long id, Model model) {
+        Optional<Record> record = recordService.findById(id);
+
+        if (record.isPresent()) {
+            model.addAttribute("record", record.get());
+            model.addAttribute("artists", artistService.findAll());
+            model.addAttribute("publishers", publisherService.findAll());
+            model.addAttribute("genres", genreService.findAll());
+            return "records/edit";
+        } else {
+            return "redirect:/records";
+        }
+    }
+
+    @PostMapping("/{id}")
+    public String updateRecord(@PathVariable Long id,
+                             @ModelAttribute Record record,
+                             BindingResult result,
+                             RedirectAttributes redirectAttributes) {
+        if (result.hasErrors()) {
+            return "records/edit";
+        }
+
+        Record updatedRecord = recordService.update(id, record);
+        redirectAttributes.addFlashAttribute("message", "Платівку успішно оновлено!");
+        return "redirect:/records";
+    }
+
+    @PostMapping("/{id}/delete")
+    public String deleteRecord(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        boolean deleted = recordService.deleteById(id);
+
+        if (deleted) {
+            redirectAttributes.addFlashAttribute("message", "Платівку успішно видалено!");
+        } else {
+            redirectAttributes.addFlashAttribute("error", "Помилка при видаленні платівки.");
+        }
+
+        return "redirect:/records";
     }
 }
