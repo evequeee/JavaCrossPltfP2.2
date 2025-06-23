@@ -91,10 +91,37 @@ public class RecordWebController {
 
     @PostMapping
     public String createRecord(@ModelAttribute Record record,
+                             @RequestParam(required = false) Long artistId,
+                             @RequestParam(required = false) Long publisherId,
+                             @RequestParam(required = false) List<Long> genreIds,
                              BindingResult result,
+                             Model model,
                              RedirectAttributes redirectAttributes) {
         if (result.hasErrors()) {
+            model.addAttribute("artists", artistService.findAll());
+            model.addAttribute("publishers", publisherService.findAll());
+            model.addAttribute("genres", genreService.findAll());
             return "records/new";
+        }
+
+        // Set the artist if artistId is provided
+        if (artistId != null) {
+            Optional<Artist> artist = artistService.findById(artistId);
+            artist.ifPresent(record::setArtist);
+        }
+
+        // Set the publisher if publisherId is provided
+        if (publisherId != null) {
+            Optional<Publisher> publisher = publisherService.findById(publisherId);
+            publisher.ifPresent(record::setPublisher);
+        }
+
+        // Set genres if genreIds are provided
+        if (genreIds != null && !genreIds.isEmpty()) {
+            for (Long genreId : genreIds) {
+                Optional<Genre> genre = genreService.findById(genreId);
+                genre.ifPresent(g -> record.getGenres().add(g));
+            }
         }
 
         Record savedRecord = recordService.save(record);
